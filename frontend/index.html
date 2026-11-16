@@ -6,33 +6,50 @@
 <title>日切放行</title>
 <script src="/static/vue.global.prod.js"></script>
 <style>
-  :root{--bg:#0b1220;--panel:#121a2b;--line:#243049;--text:#e8eefc;--muted:#93a0b8;--ok:#3ddc97;--bad:#ff6b6b;--accent:#4cc9f0}
+  :root{--bg:#0b1220;--panel:#121a2b;--line:#243049;--text:#e8eefc;--muted:#93a0b8;--ok:#3ddc97;--bad:#ff6b6b;--warn:#ffbf69;--accent:#4cc9f0;--violet:#a78bfa}
   *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--text);font-family:"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif}
-  .top{display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid var(--line);background:#0e1626}
+  .top{display:flex;align-items:center;gap:18px;padding:14px 20px;border-bottom:1px solid var(--line);background:#0e1626;flex-wrap:wrap}
   .brand{font-weight:700;letter-spacing:.08em;font-size:18px}
   .brand small{display:block;color:var(--muted);font-weight:400;font-size:11px;letter-spacing:.02em;margin-top:2px}
-  .tabs{display:flex;gap:6px;flex:1}
-  .tabs button{background:transparent;border:1px solid transparent;color:var(--muted);padding:8px 12px;border-radius:999px;cursor:pointer}
+  .tabs{display:flex;gap:6px;flex:1;flex-wrap:wrap}
+  .tabs button{background:transparent;border:1px solid transparent;color:var(--muted);padding:8px 12px;border-radius:999px;cursor:pointer;font-size:13px}
   .tabs button.on{color:var(--text);border-color:var(--line);background:#18233a}
   .user{color:var(--muted);font-size:13px}
   .ghost{background:#18233a;border:1px solid var(--line);color:var(--text);padding:7px 10px;border-radius:8px;cursor:pointer}
+  .ghost:disabled{opacity:.45;cursor:not-allowed}
   main{padding:18px 20px 28px}
   .grid{display:grid;grid-template-columns:1.2fr .8fr;gap:14px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px}
-  h2{margin:0 0 10px;font-size:15px;color:#c9d4ea}
+  .panel + .panel{margin-top:14px}
+  h2{margin:0 0 10px;font-size:15px;color:#c9d4ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  h2 .sub{font-weight:400;font-size:12px;color:var(--muted)}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
-  th{color:var(--muted);font-weight:600}
+  th,td{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+  th{color:var(--muted);font-weight:600;white-space:nowrap}
   input,select{width:100%;background:#0b1220;border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;margin:4px 0 10px}
   .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .primary{background:var(--accent);color:#041018;border:0;padding:9px 12px;border-radius:8px;font-weight:700;cursor:pointer}
   .mono{font-family:Consolas,"Courier New",monospace}
-  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#1b2a22;color:var(--ok)}
+  .tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;background:#1b2a22;color:var(--ok);white-space:nowrap}
   .tag.bad{background:#2a1518;color:var(--bad)}
+  .tag.warn{background:#2d2416;color:var(--warn)}
+  .tag.info{background:#152231;color:var(--accent)}
+  .tag.violet{background:#221b33;color:var(--violet)}
   .login{max-width:400px;margin:12vh auto;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:22px}
   .err{color:var(--bad);min-height:18px;font-size:13px}
-  .kpi{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .okmsg{color:var(--ok);min-height:18px;font-size:13px}
+  .kpi{display:grid;grid-template-columns:repeat(6,1fr);gap:10px;margin-bottom:14px}
   .kpi .panel{padding:12px}.kpi b{display:block;font-size:22px;margin-top:4px}
+  .kpi small{color:var(--muted);font-size:11px}
+  .callout{border:1px solid #2d3a55;background:#101a2c;border-radius:10px;padding:10px 12px;font-size:12px;color:#b9c6dd;line-height:1.6}
+  .callout b{color:var(--warn)}
+  .badge{display:inline-block;min-width:18px;text-align:center;padding:1px 6px;border-radius:999px;background:#2a1518;color:var(--bad);font-size:11px;font-weight:700;margin-left:4px}
+  .badge.ok{background:#1b2a22;color:var(--ok)}
+  .badge.warn{background:#2d2416;color:var(--warn)}
+  .muted{color:var(--muted)}
+  .items{margin:6px 0 0;padding-left:16px;font-size:12px;color:var(--muted)}
+  .lockflag{font-size:11px;color:var(--warn)}
 </style>
 </head>
 <body>
@@ -54,13 +71,34 @@ createApp({
   setup(){
     const token=ref(localStorage.getItem('slicegate_token')||'');
     const user=ref(localStorage.getItem('slicegate_user')||'');
-    const username=ref('admin'), password=ref('123456'), err=ref(''), tab=ref(0), actionErr=ref('');
+    const username=ref('admin'), password=ref('123456'), err=ref(''), tab=ref(0);
+    const actionErr=ref(''), actionOk=ref('');
     const slices=ref([]), releases=ref([]), watermarks=ref([]);
+    const partitions=ref([]), runs=ref([]), ledger=ref([]), policy=ref({pinned:'整笔回滚',label:'方案甲 · 整笔回滚',note:'',not_adopted:'保留完整'}), stats=ref({});
     const form=ref({slice_no:'SL-2026-11-03-east',biz_date:'2026-11-03',partition_key:'east',row_count:1000,expected_count:1000});
-    const releaseSliceId=ref(1), consumer=ref('ads_order');
-    const nav=['切片登记','完整度裁决','下游放行','消费水位'];
-    const completeCnt=computed(()=>slices.value.filter(s=>s.completeness==='完整').length);
-    const openCnt=computed(()=>slices.value.filter(s=>s.release_status!=='已放行').length);
+    const releaseSliceId=ref(null), consumer=ref('ads_order');
+    const recut=ref({biz_date:'2026-11-01',partition_key:'west',consumer:'ads_order',
+      slices:[{slice_no:'SL-2026-11-01-west-r1',row_count:1000,expected_count:1000}]});
+    const lastRun=ref(null);
+    const nav=['切片登记','完整度裁决','下游放行','重切队列','分区详情','消费水位','重切裁决簿'];
+
+    const activeSlices=computed(()=>slices.value.filter(s=>s.active));
+    const completeCnt=computed(()=>activeSlices.value.filter(s=>s.completeness==='完整').length);
+    const openCnt=computed(()=>activeSlices.value.filter(s=>s.release_status!=='已放行').length);
+    const runBadge=computed(()=>{
+      const c={}; runs.value.forEach(r=>{c[r.status]=(c[r.status]||0)+1;}); return c;
+    });
+    const lockCount=computed(()=>partitions.value.filter(p=>p.lock).length);
+    const contentionCount=computed(()=>partitions.value.reduce((a,p)=>a+(p.contention||0),0));
+    const attentionRuns=computed(()=>runs.value.filter(r=>['失败回滚','切片号冲突','重切争用','口径偏离'].includes(r.status)));
+    const wmHeads=computed(()=>watermarks.value.filter(w=>w.is_head));
+    const wmMisaligned=computed(()=>wmHeads.value.filter(w=>w.align!=='一致'));
+    const partitionOptions=computed(()=>{
+      const seen=new Set(), out=[];
+      partitions.value.forEach(p=>{const k=p.biz_date+'/'+p.partition_key; if(!seen.has(k)){seen.add(k); out.push({biz_date:p.biz_date,partition_key:p.partition_key});}});
+      return out;
+    });
+
     function auth(){return {Authorization:'Bearer '+token.value,'Content-Type':'application/json'};}
     async function login(){
       err.value='';
@@ -79,19 +117,54 @@ createApp({
     }
     async function refresh(){
       if(!token.value) return;
+      const ov=await loadJson('/api/recut/overview'); if(ov===null) return;
+      partitions.value=Array.isArray(ov.partitions)?ov.partitions:[];
+      runs.value=Array.isArray(ov.runs)?ov.runs:[];
+      ledger.value=Array.isArray(ov.ledger)?ov.ledger:[];
+      watermarks.value=Array.isArray(ov.watermarks)?ov.watermarks:[];
+      policy.value=ov.policy||policy.value;
+      stats.value=ov.stats||{};
       const s=await loadJson('/api/slices'); if(s===null) return;
       slices.value=Array.isArray(s.items)?s.items:[];
       const rel=await loadJson('/api/releases'); if(rel===null) return;
       releases.value=Array.isArray(rel.items)?rel.items:[];
-      const w=await loadJson('/api/watermarks'); if(w===null) return;
-      watermarks.value=Array.isArray(w.items)?w.items:[];
-      if(slices.value.length) releaseSliceId.value=slices.value[0].id;
+      if(!releaseSliceId.value && activeSlices.value.length) releaseSliceId.value=activeSlices.value[0].id;
     }
-    async function createSlice(){actionErr.value='';const r=await fetch('/api/slices',{method:'POST',headers:auth(),body:JSON.stringify(form.value)});const j=await r.json();if(!r.ok)actionErr.value=j.detail||'失败';await refresh();}
-    async function evaluate(id){await fetch('/api/slices/'+id+'/evaluate',{method:'POST',headers:auth()});await refresh();}
-    async function doRelease(){actionErr.value='';const r=await fetch('/api/slices/'+releaseSliceId.value+'/release',{method:'POST',headers:auth(),body:JSON.stringify({consumer:consumer.value})});const j=await r.json();if(!r.ok)actionErr.value=j.detail||'放行失败';await refresh();}
+    async function createSlice(){actionErr.value='';actionOk.value='';const r=await fetch('/api/slices',{method:'POST',headers:auth(),body:JSON.stringify(form.value)});const j=await r.json();if(!r.ok)actionErr.value=j.detail||'失败';else actionOk.value='已写入登记';await refresh();}
+    async function evaluate(id){actionErr.value='';actionOk.value='';const r=await fetch('/api/slices/'+id+'/evaluate',{method:'POST',headers:auth()});const j=await r.json().catch(()=>({}));if(!r.ok)actionErr.value=j.detail||'重裁失败';await refresh();}
+    async function doRelease(){actionErr.value='';actionOk.value='';if(!releaseSliceId.value){actionErr.value='请先选择未撤回的切片';return;}const r=await fetch('/api/slices/'+releaseSliceId.value+'/release',{method:'POST',headers:auth(),body:JSON.stringify({consumer:consumer.value})});const j=await r.json();if(!r.ok)actionErr.value=j.detail||'放行失败';else actionOk.value=j.message||'放行完成';await refresh();}
+    function addRecutSlice(){recut.value.slices.push({slice_no:'',row_count:0,expected_count:1000});}
+    function removeRecutSlice(i){recut.value.slices.splice(i,1);}
+    async function doRecut(){
+      actionErr.value='';actionOk.value='';lastRun.value=null;
+      if(!recut.value.slices.length){actionErr.value='重切清单为空，整次拒绝';return;}
+      const body={biz_date:recut.value.biz_date,partition_key:recut.value.partition_key,
+        consumer:recut.value.consumer,policy:policy.value.pinned,slices:recut.value.slices};
+      const r=await fetch('/api/recut',{method:'POST',headers:auth(),body:JSON.stringify(body)});
+      const j=await r.json().catch(()=>({})); lastRun.value=j;
+      if(!r.ok){
+        actionErr.value=(j.error?('['+j.error+'] '):'')+(j.message||j.detail||'重切失败');
+      }else{
+        actionOk.value='重切成功：'+((j.result&&j.result.new_slices||[]).map(x=>x.slice_no).join(', '));
+      }
+      await refresh();
+    }
+    function switchTab(i){tab.value=i;actionErr.value='';actionOk.value='';}
+    function statusClass(st){
+      if(st==='成功') return 'tag';
+      if(st==='进行中') return 'tag info';
+      if(st==='重切争用') return 'tag warn';
+      if(st==='口径偏离') return 'tag violet';
+      return 'tag bad';
+    }
+    function releaseClass(st){return st==='已放行'?'tag':(st==='已撤回'||st==='已归档'?'tag warn':'tag bad');}
+    function alignClass(al){return al==='一致'?'tag':'tag bad';}
     onMounted(()=>{if(token.value)refresh();});
-    return {token,user,username,password,err,tab,nav,slices,releases,watermarks,form,releaseSliceId,consumer,actionErr,completeCnt,openCnt,login,logout,createSlice,evaluate,doRelease};
+    return {token,user,username,password,err,tab,nav,slices,releases,watermarks,partitions,runs,ledger,policy,stats,
+      form,releaseSliceId,consumer,recut,lastRun,actionErr,actionOk,
+      activeSlices,completeCnt,openCnt,runBadge,lockCount,contentionCount,attentionRuns,wmHeads,wmMisaligned,partitionOptions,
+      login,logout,refresh,createSlice,evaluate,doRelease,addRecutSlice,removeRecutSlice,doRecut,switchTab,
+      statusClass,releaseClass,alignClass};
   },
   template:`
   <div v-if="!token" class="login">
@@ -101,25 +174,43 @@ createApp({
   </div>
   <div v-if="token">
     <div class="top">
-      <div class="brand">日切放行<small>切片 → 完整度 → 放行 → 水位</small></div>
-      <div class="tabs"><button v-for="(n,i) in nav" :key="n" :class="{on:tab===i}" @click="tab=i">{{n}}</button></div>
+      <div class="brand">日切放行<small>切片 → 完整度 → 放行 → 重切 → 水位</small></div>
+      <div class="tabs">
+        <button v-for="(n,i) in nav" :key="n" :class="{on:tab===i}" @click="switchTab(i)">
+          {{n}}<span v-if="i===3 && attentionRuns.length" class="badge warn">{{attentionRuns.length}}</span>
+          <span v-if="i===4 && lockCount" class="badge warn">{{lockCount}}</span>
+          <span v-if="i===5 && wmMisaligned.length" class="badge">{{wmMisaligned.length}}</span>
+        </button>
+      </div>
       <div class="user">{{user}}</div><button class="ghost" @click="logout">退出</button>
     </div>
     <main>
       <div class="kpi">
-        <div class="panel">切片总数<b class="mono">{{slices.length}}</b></div>
-        <div class="panel">已完整<b class="mono">{{completeCnt}}</b></div>
-        <div class="panel">未放行<b class="mono">{{openCnt}}</b></div>
+        <div class="panel">切片总数<b class="mono">{{slices.length}}</b><small>含已撤回</small></div>
+        <div class="panel">在役切片<b class="mono">{{activeSlices.length}}</b><small>未撤回</small></div>
+        <div class="panel">已完整<b class="mono">{{completeCnt}}</b><small>在役</small></div>
+        <div class="panel">未放行<b class="mono">{{openCnt}}</b><small>在役</small></div>
+        <div class="panel">重切争用<b class="mono">{{contentionCount}}</b><small>累计分区</small></div>
+        <div class="panel">水位错位<b class="mono">{{wmMisaligned.length}}</b><small>当前 head</small></div>
       </div>
+
+      <div class="callout" style="margin-bottom:14px">
+        <b>重切裁决簿口径（{{policy.label}}）</b>：{{policy.note}}
+        <div class="muted" style="margin-top:4px">未采用：{{policy.not_adopted}}（保留完整行 / 累计重切跳过次数）。请求偏离裁决簿将被拒绝并记「口径偏离」，不会写入任何切片或水位。</div>
+      </div>
+
       <div v-show="tab===0" class="grid">
         <div class="panel">
-          <h2>在途切片</h2>
-          <table><thead><tr><th>切片号</th><th>日/区</th><th>实收</th><th>完整度</th><th></th></tr></thead>
+          <h2>在途切片 <span class="sub">重切锁中的分区会标注持锁人</span></h2>
+          <table><thead><tr><th>切片号</th><th>日/区</th><th>实收</th><th>完整度</th><th>放行态</th><th></th></tr></thead>
           <tbody><tr v-for="s in slices" :key="s.id">
-            <td class="mono">{{s.slice_no}}</td><td>{{s.biz_date}} / {{s.partition_key}}</td>
+            <td class="mono">{{s.slice_no}}<div v-if="!s.active" class="lockflag">已撤回 / 归档</div></td>
+            <td>{{s.biz_date}} / {{s.partition_key}}</td>
             <td class="mono">{{s.row_count}}/{{s.expected_count}}</td>
             <td><span class="tag" :class="{bad:s.completeness!=='完整'}">{{s.completeness}}</span></td>
-            <td><button class="ghost" @click="evaluate(s.id)">重裁</button></td>
+            <td><span :class="releaseClass(s.release_status)">{{s.release_status}}</span>
+              <div v-if="s.recut_locked" class="lockflag">重切锁：{{s.lock_owner}}</div></td>
+            <td><button class="ghost" :disabled="!s.active" @click="evaluate(s.id)">重裁</button></td>
           </tr></tbody></table>
         </div>
         <div class="panel">
@@ -128,35 +219,177 @@ createApp({
           <div class="row"><div><label>分区</label><input v-model="form.partition_key"/></div><div><label>实收</label><input type="number" v-model.number="form.row_count"/></div></div>
           <label>期望</label><input type="number" v-model.number="form.expected_count"/>
           <button class="primary" @click="createSlice">写入登记</button>
-          <div class="err">{{actionErr}}</div>
+          <div class="err">{{actionErr}}</div><div class="okmsg">{{actionOk}}</div>
         </div>
       </div>
+
       <div v-show="tab===1" class="panel">
         <h2>完整度裁决</h2>
-        <table><thead><tr><th>切片</th><th>缺口</th><th>结论</th><th>放行态</th></tr></thead>
+        <table><thead><tr><th>切片</th><th>缺口</th><th>结论</th><th>放行态</th><th>版本</th></tr></thead>
         <tbody><tr v-for="s in slices" :key="'c'+s.id">
           <td class="mono">{{s.slice_no}}</td><td class="mono">{{Math.max(s.expected_count-s.row_count,0)}}</td>
-          <td>{{s.completeness}}</td><td>{{s.release_status}}</td>
+          <td><span class="tag" :class="{bad:s.completeness!=='完整'}">{{s.completeness}}</span></td>
+          <td><span :class="releaseClass(s.release_status)">{{s.release_status}}</span></td>
+          <td class="muted">{{s.active?'在役':'已被重切替换'}}</td>
         </tr></tbody></table>
       </div>
+
       <div v-show="tab===2" class="grid">
         <div class="panel">
           <h2>申请放行</h2>
-          <label>切片</label><select v-model.number="releaseSliceId"><option v-for="s in slices" :value="s.id">{{s.slice_no}}（{{s.completeness}}）</option></select>
+          <label>切片（仅未撤回）</label>
+          <select v-model.number="releaseSliceId"><option v-for="s in activeSlices" :value="s.id">{{s.slice_no}}（{{s.completeness}} / {{s.release_status}}）</option></select>
           <label>下游</label><input v-model="consumer"/>
           <button class="primary" @click="doRelease">放行</button>
-          <div class="err">{{actionErr}}</div>
+          <div class="err">{{actionErr}}</div><div class="okmsg">{{actionOk}}</div>
         </div>
         <div class="panel">
           <h2>放行流水</h2>
           <table><thead><tr><th>切片</th><th>下游</th><th>结果</th><th>时间</th></tr></thead>
-          <tbody><tr v-for="r in releases" :key="r.id"><td class="mono">{{r.slice_no}}</td><td>{{r.consumer}}</td><td>{{r.status}}</td><td class="mono">{{r.created_at}}</td></tr></tbody></table>
+          <tbody><tr v-for="r in releases" :key="r.id"><td class="mono">{{r.slice_no}}<div v-if="r.retired_at" class="lockflag">旧版本</div></td><td>{{r.consumer}}</td><td><span class="tag" :class="{bad:r.status==='撤回',warn:r.status==='拒绝'}">{{r.status}}</span></td><td class="mono">{{r.created_at}}</td></tr></tbody></table>
         </div>
       </div>
-      <div v-show="tab===3" class="panel">
-        <h2>消费水位</h2>
-        <table><thead><tr><th>消费方</th><th>业务日</th><th>水位</th><th>来源切片</th></tr></thead>
-        <tbody><tr v-for="w in watermarks" :key="w.id"><td>{{w.consumer}}</td><td>{{w.biz_date}}</td><td class="mono">{{w.watermark}}</td><td class="mono">{{w.source_slice}}</td></tr></tbody></table>
+
+      <div v-show="tab===3" class="grid">
+        <div class="panel">
+          <h2>发起重切 <span class="sub">口径钉死：{{policy.label}}</span></h2>
+          <div class="row">
+            <div><label>业务日</label><input v-model="recut.biz_date"/></div>
+            <div><label>分区</label><input v-model="recut.partition_key"/></div>
+          </div>
+          <label>下游（接续放行）</label><input v-model="recut.consumer"/>
+          <div class="callout" style="margin-bottom:10px">
+            本趟任一切片未齐或切片号冲突 → <b>整笔回滚</b>，旧放行态与水位保持重切前快照；
+            已完整行也不保留、不累计重切跳过次数。同分区并发重切将加锁排队，后到者记重切争用。
+          </div>
+          <table><thead><tr><th>切片号</th><th>实收</th><th>期望</th><th></th></tr></thead>
+          <tbody><tr v-for="(s,i) in recut.slices" :key="i">
+            <td><input v-model="s.slice_no" class="mono"/></td>
+            <td><input type="number" v-model.number="s.row_count"/></td>
+            <td><input type="number" v-model.number="s.expected_count"/></td>
+            <td><button class="ghost" @click="removeRecutSlice(i)">删</button></td>
+          </tr></tbody></table>
+          <button class="ghost" @click="addRecutSlice">+ 加一片</button>
+          <button class="primary" style="margin-left:8px" @click="doRecut">提交重切</button>
+          <div class="err">{{actionErr}}</div><div class="okmsg">{{actionOk}}</div>
+          <div v-if="lastRun && lastRun.run" class="callout" style="margin-top:10px">
+            <div>裁决：<span :class="statusClass(lastRun.run.status)">{{lastRun.run.status}}</span>
+              <span class="mono muted">{{lastRun.run.run_no}}</span></div>
+            <div>{{lastRun.run.note}}</div>
+            <ul class="items"><li v-for="(it,i) in lastRun.run.items" :key="i">
+              {{it.slice_no}} · {{it.status}} · {{it.reason}}</li></ul>
+          </div>
+        </div>
+        <div class="panel">
+          <h2>重切队列
+            <span class="sub">共 {{runs.length}}</span>
+            <span class="badge warn" v-if="runBadge['重切争用']">争用 {{runBadge['重切争用']}}</span>
+            <span class="badge" v-if="runBadge['失败回滚']">回滚 {{runBadge['失败回滚']}}</span>
+            <span class="badge" v-if="runBadge['切片号冲突']">冲突 {{runBadge['切片号冲突']}}</span>
+            <span class="badge warn" v-if="runBadge['口径偏离']">偏离 {{runBadge['口径偏离']}}</span>
+          </h2>
+          <table><thead><tr><th>运行号</th><th>日/区</th><th>裁决</th><th>谁</th><th>说明</th></tr></thead>
+          <tbody><tr v-for="r in runs" :key="r.id">
+            <td class="mono">{{r.run_no}}</td>
+            <td>{{r.biz_date}} / {{r.partition_key}}</td>
+            <td><span :class="statusClass(r.status)">{{r.status}}</span><div class="muted" style="font-size:11px">{{r.policy}}</div></td>
+            <td>{{r.requested_by}}</td>
+            <td style="max-width:280px">{{r.note}}
+              <ul class="items" v-if="r.items && r.items.length">
+                <li v-for="(it,i) in r.items.slice(0,4)" :key="i">{{it.slice_no}} · {{it.status}}</li>
+              </ul>
+            </td>
+          </tr></tbody></table>
+        </div>
+      </div>
+
+      <div v-show="tab===4">
+        <div class="panel">
+          <h2>分区详情 <span class="sub">切片、重切锁、水位与累计争用必须对齐</span></h2>
+          <div class="callout" style="margin-bottom:10px">每个分区只允许一套正式放行：旧切片在重切成功时整片撤回（已撤回/已归档），水位 head 必须指向在役且已放行的完整切片。</div>
+          <table><thead><tr><th>业务日/分区</th><th>裁决口径</th><th>在役 / 已退</th><th>已放行</th><th>重切锁</th><th>争用</th><th>最近重切</th><th>水位 head</th></tr></thead>
+          <tbody><tr v-for="p in partitions" :key="p.biz_date+'/'+p.partition_key">
+            <td class="mono">{{p.biz_date}} / {{p.partition_key}}</td>
+            <td><span class="tag violet">{{p.policy}}</span></td>
+            <td class="mono">{{p.active}} / {{p.retired}}</td>
+            <td class="mono">{{p.released}}<span class="muted">（退{{p.retired_released}}）</span></td>
+            <td>
+              <span v-if="p.lock" class="tag warn">持锁 {{p.lock.owner}}<div class="mono" style="font-size:11px">{{p.lock.run_no}}</div></span>
+              <span v-else class="muted">空闲</span>
+            </td>
+            <td><span class="badge" :class="{ok:!p.contention}">{{p.contention}}</span></td>
+            <td>
+              <template v-if="p.last_run">
+                <span :class="statusClass(p.last_run.status)">{{p.last_run.status}}</span>
+                <div class="mono muted" style="font-size:11px">{{p.last_run.created_at}}</div>
+              </template>
+              <span v-else class="muted">—</span>
+            </td>
+            <td>
+              <div v-for="(h,i) in p.watermark_heads" :key="i">
+                <span :class="alignClass(h.align)">{{h.align}}</span>
+                <span class="mono" style="font-size:11px">{{h.consumer}} → {{h.source_slice}}</span>
+              </div>
+              <span v-if="!p.watermark_heads.length" class="muted">无</span>
+            </td>
+          </tr></tbody></table>
+        </div>
+      </div>
+
+      <div v-show="tab===5" class="grid">
+        <div class="panel">
+          <h2>消费水位 <span class="sub">当前 head 与来源切片对齐</span>
+            <span class="badge" v-if="wmMisaligned.length">错位 {{wmMisaligned.length}}</span></h2>
+          <table><thead><tr><th>消费方</th><th>业务日</th><th>水位</th><th>来源切片</th><th>来源状态</th><th>对齐</th></tr></thead>
+          <tbody><tr v-for="w in watermarks" :key="w.id">
+            <td>{{w.consumer}}<span v-if="w.is_head" class="badge ok">head</span></td>
+            <td>{{w.biz_date}}</td><td class="mono">{{w.watermark}}</td>
+            <td class="mono">{{w.source_slice}}</td>
+            <td>{{w.source_state||'—'}}</td>
+            <td><span :class="alignClass(w.align)">{{w.align}}</span></td>
+          </tr></tbody></table>
+        </div>
+        <div class="panel">
+          <h2>水位口径旁注</h2>
+          <div class="callout">
+            水位只在新切片全量完整、已落库且已放行后推进；重切失败时水位保持重切前快照，绝不指向未完整切片。
+            <div class="muted" style="margin-top:6px">旧版本水位作为留档保留，标记「来源已撤回」；head 必须「一致」。</div>
+          </div>
+          <h2 style="margin-top:14px">口径与统计</h2>
+          <table><tbody>
+            <tr><th>钉死口径</th><td><span class="tag violet">{{policy.pinned}}</span></td></tr>
+            <tr><th>未采用</th><td>{{policy.not_adopted}}（{{policy.skip_count_note||stats.skip_note}}）</td></tr>
+            <tr><th>重切总次数</th><td class="mono">{{stats.runs||0}}</td></tr>
+            <tr><th>成功 / 回滚</th><td class="mono">{{stats.success||0}} / {{(stats.rollbacks||0)+(stats.conflicts||0)}}</td></tr>
+            <tr><th>争用 / 偏离</th><td class="mono">{{stats.contention||0}} / {{stats.deviations||0}}</td></tr>
+          </tbody></table>
+        </div>
+      </div>
+
+      <div v-show="tab===6" class="grid">
+        <div class="panel">
+          <h2>重切裁决簿 <span class="sub">同业务日写入后当天不得更换</span></h2>
+          <table><thead><tr><th>业务日</th><th>口径</th><th>钉死人</th><th>时间</th></tr></thead>
+          <tbody><tr v-for="l in ledger" :key="l.id">
+            <td class="mono">{{l.biz_date}}</td><td><span class="tag violet">{{l.policy}}</span></td>
+            <td>{{l.created_by}}</td><td class="mono">{{l.created_at}}</td>
+          </tr></tbody></table>
+          <div class="callout" style="margin-top:10px">{{policy.note}}</div>
+        </div>
+        <div class="panel">
+          <h2>互斥与留痕</h2>
+          <div class="callout">
+            同分区两名值班同时点重切：先到者持锁执行；后到者加锁排队，并在重切队列留下「重切争用」记录，不静默通过。
+          </div>
+          <table style="margin-top:10px"><thead><tr><th>持锁分区</th><th>持锁人</th><th>运行号</th><th>到期</th></tr></thead>
+          <tbody>
+            <tr v-for="p in partitions.filter(x=>x.lock)" :key="p.biz_date+'/'+p.partition_key">
+              <td class="mono">{{p.biz_date}} / {{p.partition_key}}</td>
+              <td>{{p.lock.owner}}</td><td class="mono">{{p.lock.run_no}}</td><td class="mono">{{p.lock.expires_at}}</td>
+            </tr>
+            <tr v-if="!partitions.filter(x=>x.lock).length"><td colspan="4" class="muted">当前无重切锁</td></tr>
+          </tbody></table>
+        </div>
       </div>
     </main>
   </div>`
